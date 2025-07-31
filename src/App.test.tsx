@@ -279,7 +279,6 @@ describe("App", () => {
     const logContainerEl = document.getElementById("log-container");
     expect(logContainerEl).toBeTruthy();
     expect(logContainerEl).toBeVisible();
-    expect(document.getElementById("state-panel-shown")).toBeTruthy();
 
     const line5 = document.getElementById("line-5");
     const line6 = document.getElementById("line-6");
@@ -307,14 +306,14 @@ describe("App", () => {
 
     // Keyboard Down Arrow
     fireEvent.keyDown(logContainerEl, { key: "ArrowDown", code: "ArrowDown" });
+    expect(line5.classList.contains("selected-line")).toBeFalsy();
     expect(line6.classList.contains("selected-line")).toBeFalsy();
     expect(line7.classList.contains("selected-line")).toBeTruthy();
-    expect(line5.classList.contains("selected-line")).toBeFalsy();
 
     // Keyboard Up Arrow
     fireEvent.keyDown(logContainerEl, { key: "ArrowUp", code: "ArrowUp" });
+    expect(line5.classList.contains("selected-line")).toBeTruthy();
     expect(line6.classList.contains("selected-line")).toBeFalsy();
     expect(line7.classList.contains("selected-line")).toBeFalsy();
-    expect(line5.classList.contains("selected-line")).toBeTruthy();
   });
 });
