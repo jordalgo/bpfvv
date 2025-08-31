@@ -500,11 +500,15 @@ function HideShowButton({
 function StatePanelRaw({
   selectedLine,
   selectedCLine,
+  selectedMemSlotId,
   verifierLogState,
+  handleStateRowClick,
 }: {
   selectedLine: number;
   selectedCLine: number;
+  selectedMemSlotId: string;
   verifierLogState: VerifierLogState;
+  handleStateRowClick: (event: React.MouseEvent<HTMLDivElement>) => void;
 }) {
   const { lines, bpfStates } = verifierLogState;
   let rows: ReactElement[] = [];
@@ -519,17 +523,17 @@ function StatePanelRaw({
   let rowCounter = 1;
 
   const addRow = (id: string) => {
-    let className = "";
+    const classes = ["state-row"];
     const line = lines[selectedLine];
     if (line?.type === ParsedLineType.INSTRUCTION) {
       const value = bpfState.values.get(id);
       switch (value?.effect) {
         case Effect.WRITE:
         case Effect.UPDATE:
-          className = "effect-write";
+          classes.push("effect-write");
           break;
         case Effect.READ:
-          className = "effect-read";
+          classes.push("effect-read");
           break;
         case Effect.NONE:
         default:
@@ -537,11 +541,15 @@ function StatePanelRaw({
       }
     }
 
+    if (selectedMemSlotId === id) {
+      classes.push("selected-mem-slot");
+    }
+
     const contentFunc = getMemSlotDisplayValue(bpfState, prevBpfState, id);
 
     rows.push(
-      <tr className={className} key={rowCounter}>
-        <td>{id}</td>
+      <tr className={classes.join(" ")} key={rowCounter} data-id={id}>
+        <td className="mem-slot-label">{id}</td>
         <td>
           <span>{contentFunc ? contentFunc() : ""}</span>
         </td>
@@ -602,7 +610,7 @@ function StatePanelRaw({
           <div>PC: {bpfState.pc}</div>
           <div>Frame: {bpfState.frame}</div>
         </div>
-        <table>
+        <table onClick={handleStateRowClick}>
           <tbody>{rows}</tbody>
         </table>
       </div>
@@ -917,6 +925,7 @@ const CSourceLines = React.memo(CSourceLinesRaw);
 export function MainContent({
   verifierLogState,
   logLines,
+  logLineIdToIdx,
   selectedLine,
   selectedMemSlotId,
   selectedCLine,
@@ -925,9 +934,11 @@ export function MainContent({
   handleLogLinesClick,
   handleLogLinesOver,
   handleLogLinesOut,
+  handleStateRowClick,
 }: {
   verifierLogState: VerifierLogState;
   logLines: ParsedLine[];
+  logLineIdToIdx: Map<number, number>;
   selectedLine: number;
   selectedMemSlotId: string;
   selectedCLine: number;
@@ -936,6 +947,7 @@ export function MainContent({
   handleLogLinesClick: (event: React.MouseEvent<HTMLDivElement>) => void;
   handleLogLinesOver: (event: React.MouseEvent<HTMLDivElement>) => void;
   handleLogLinesOut: (event: React.MouseEvent<HTMLDivElement>) => void;
+  handleStateRowClick: (event: React.MouseEvent<HTMLDivElement>) => void;
 }) {
   const memSlotDependencies: number[] = useMemo(() => {
     const lines = verifierLogState.lines;
@@ -1071,15 +1083,39 @@ export function MainContent({
       return;
     }
 
-    const depArrowSelected = document.getElementById(
-      getDepArrowDomId(selectedLine),
-    );
+    const minIdx = memSlotDependencies[0];
+    let maxIdx = memSlotDependencies[memSlotDependencies.length - 1];
+    let shouldScrollLogLines = true;
+
+    const parsedLine = verifierLogState.lines[selectedLine];
+    if (parsedLine.type == ParsedLineType.INSTRUCTION) {
+      const bpfIns = parsedLine.bpfIns;
+      if (
+        bpfIns.reads.includes(selectedMemSlotId) ||
+        bpfIns.writes.includes(selectedMemSlotId)
+      ) {
+        maxIdx = selectedLine;
+        // the selected log line has the selectedMemSlotId
+        // no need to scroll the panel
+        shouldScrollLogLines = false;
+      }
+    }
+
+    if (shouldScrollLogLines) {
+      const logLineIdx = logLineIdToIdx.get(maxIdx);
+      if (logLineIdx) {
+        scrollToLogLine(logLineIdx, logLines.length);
+      }
+    }
+
+    if (minIdx == maxIdx) {
+      return;
+    }
+
+    const depArrowSelected = document.getElementById(getDepArrowDomId(maxIdx));
     if (depArrowSelected) {
       depArrowSelected.classList.add("dep-end");
     }
-
-    const minIdx = memSlotDependencies[0];
-    const maxIdx = selectedLine;
 
     for (let idx = minIdx; idx < maxIdx; idx++) {
       if (idx === minIdx) {
@@ -1092,7 +1128,7 @@ export function MainContent({
         if (depArrowMid) {
           depArrowMid.classList.add("dep-mid");
         }
-      } else if (minIdx < idx && idx < selectedLine) {
+      } else if (minIdx < idx && idx < maxIdx) {
         const depArrowTrack = document.getElementById(getDepArrowDomId(idx));
         if (depArrowTrack) {
           depArrowTrack.classList.add("dep-track");
@@ -1115,7 +1151,7 @@ export function MainContent({
           if (depArrowMid) {
             depArrowMid.classList.remove("dep-mid");
           }
-        } else if (minIdx < idx && idx < selectedLine) {
+        } else if (minIdx < idx && idx < maxIdx) {
           const depArrowTrack = document.getElementById(getDepArrowDomId(idx));
           if (depArrowTrack) {
             depArrowTrack.classList.remove("dep-track");
@@ -1123,7 +1159,13 @@ export function MainContent({
         }
       }
     };
-  }, [selectedLine, selectedMemSlotId, memSlotDependencies, verifierLogState]);
+  }, [
+    selectedLine,
+    selectedMemSlotId,
+    memSlotDependencies,
+    verifierLogState,
+    logLines,
+  ]);
 
   const handleArrowsClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -1241,7 +1283,9 @@ export function MainContent({
       <StatePanel
         selectedLine={selectedLine}
         selectedCLine={selectedCLine}
+        selectedMemSlotId={selectedMemSlotId}
         verifierLogState={verifierLogState}
+        handleStateRowClick={handleStateRowClick}
       />
     </div>
   );

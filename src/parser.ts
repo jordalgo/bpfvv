@@ -216,7 +216,7 @@ export type CSourceLine = {
   fileName: string;
   lineNum: number;
   id: string;
-  ignore: boolean,
+  ignore: boolean;
 } & GenericParsedLine;
 
 export enum KnownMessageInfoType {

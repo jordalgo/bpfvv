@@ -266,9 +266,12 @@ exports[`App renders the log visualizer when text is pasted 1`] = `
             <table>
               <tbody>
                 <tr
-                  class=""
+                  class="state-row"
+                  data-id="r0"
                 >
-                  <td>
+                  <td
+                    class="mem-slot-label"
+                  >
                     r0
                   </td>
                   <td>
@@ -276,9 +279,12 @@ exports[`App renders the log visualizer when text is pasted 1`] = `
                   </td>
                 </tr>
                 <tr
-                  class="effect-read"
+                  class="state-row effect-read"
+                  data-id="r1"
                 >
-                  <td>
+                  <td
+                    class="mem-slot-label"
+                  >
                     r1
                   </td>
                   <td>
@@ -288,9 +294,12 @@ exports[`App renders the log visualizer when text is pasted 1`] = `
                   </td>
                 </tr>
                 <tr
-                  class=""
+                  class="state-row"
+                  data-id="r2"
                 >
-                  <td>
+                  <td
+                    class="mem-slot-label"
+                  >
                     r2
                   </td>
                   <td>
@@ -298,9 +307,12 @@ exports[`App renders the log visualizer when text is pasted 1`] = `
                   </td>
                 </tr>
                 <tr
-                  class=""
+                  class="state-row"
+                  data-id="r3"
                 >
-                  <td>
+                  <td
+                    class="mem-slot-label"
+                  >
                     r3
                   </td>
                   <td>
@@ -308,9 +320,12 @@ exports[`App renders the log visualizer when text is pasted 1`] = `
                   </td>
                 </tr>
                 <tr
-                  class=""
+                  class="state-row"
+                  data-id="r4"
                 >
-                  <td>
+                  <td
+                    class="mem-slot-label"
+                  >
                     r4
                   </td>
                   <td>
@@ -318,9 +333,12 @@ exports[`App renders the log visualizer when text is pasted 1`] = `
                   </td>
                 </tr>
                 <tr
-                  class=""
+                  class="state-row"
+                  data-id="r5"
                 >
-                  <td>
+                  <td
+                    class="mem-slot-label"
+                  >
                     r5
                   </td>
                   <td>
@@ -328,9 +346,12 @@ exports[`App renders the log visualizer when text is pasted 1`] = `
                   </td>
                 </tr>
                 <tr
-                  class=""
+                  class="state-row"
+                  data-id="r6"
                 >
-                  <td>
+                  <td
+                    class="mem-slot-label"
+                  >
                     r6
                   </td>
                   <td>
@@ -338,9 +359,12 @@ exports[`App renders the log visualizer when text is pasted 1`] = `
                   </td>
                 </tr>
                 <tr
-                  class="effect-read"
+                  class="state-row effect-read"
+                  data-id="r7"
                 >
-                  <td>
+                  <td
+                    class="mem-slot-label"
+                  >
                     r7
                   </td>
                   <td>
@@ -350,9 +374,12 @@ exports[`App renders the log visualizer when text is pasted 1`] = `
                   </td>
                 </tr>
                 <tr
-                  class=""
+                  class="state-row"
+                  data-id="r8"
                 >
-                  <td>
+                  <td
+                    class="mem-slot-label"
+                  >
                     r8
                   </td>
                   <td>
@@ -360,9 +387,12 @@ exports[`App renders the log visualizer when text is pasted 1`] = `
                   </td>
                 </tr>
                 <tr
-                  class=""
+                  class="state-row"
+                  data-id="r9"
                 >
-                  <td>
+                  <td
+                    class="mem-slot-label"
+                  >
                     r9
                   </td>
                   <td>
@@ -370,9 +400,12 @@ exports[`App renders the log visualizer when text is pasted 1`] = `
                   </td>
                 </tr>
                 <tr
-                  class=""
+                  class="state-row"
+                  data-id="r10"
                 >
-                  <td>
+                  <td
+                    class="mem-slot-label"
+                  >
                     r10
                   </td>
                   <td>
