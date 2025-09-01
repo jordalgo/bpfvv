@@ -18,7 +18,7 @@ import { CSourceMap, getMemSlotDependencies } from "./analyzer";
 
 import { BpfState, getBpfState, VerifierLogState } from "./analyzer";
 
-import { getVisibleIdxRange, scrollToLogLine } from "./utils";
+import { getVisibleLogLineRange, scrollToLogLine } from "./utils";
 
 import BPF_HELPERS_JSON from "./bpf-helpers.json";
 
@@ -1219,7 +1219,7 @@ export function MainContent({
         }
       }
 
-      let { min, max } = getVisibleIdxRange(verifierLogState.lines.length);
+      let { min, max } = getVisibleLogLineRange(logLines.length);
       const isVisible = (idx: number) => {
         return min < idx && idx < max;
       };
@@ -1247,7 +1247,7 @@ export function MainContent({
         }
       }
     },
-    [verifierLogState, memSlotDependencies, selectedLine],
+    [logLines, memSlotDependencies, selectedLine],
   );
 
   return (
