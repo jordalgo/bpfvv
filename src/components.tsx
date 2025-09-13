@@ -16,6 +16,7 @@ import {
 import {
   BpfMemSlotMap,
   foreachStackSlot,
+  getAdjustedMemSlotId,
   insEntersNewFrame,
   normalMemSlotId,
 } from "./utils";
@@ -469,26 +470,37 @@ export function MemSlot({
     case OperandType.REG:
       return <RegSpan lineIdx={line.idx} reg={op.id} display={memSlotString} />;
     case OperandType.FP:
+      const displayFp = memSlotString || op.id;
       return (
         <StackSlotSpan
           lineIdx={line.idx}
-          id={op.id}
           normalId={normalMemSlotId(op.id, state.frame)}
-          display={memSlotString}
-        />
+        >
+          <span>{displayFp}</span>
+        </StackSlotSpan>
       );
     case OperandType.MEM:
-      // find register position and make a span around it
+      const reg = op.memref?.reg || "";
       const regStart = memSlotString.search(/r[0-9]/);
       const regEnd = regStart + 2;
-      const reg = memSlotString.slice(regStart, regEnd);
-      return (
+      const displayMem = (
         <>
           {memSlotString.slice(0, regStart)}
           <RegSpan lineIdx={line.idx} reg={reg} display={reg} />
           {memSlotString.slice(regEnd)}
         </>
       );
+
+      // If we know the fp then also make it clickable
+      const adjustedMemSlotId = getAdjustedMemSlotId(state, op.memref);
+      if (adjustedMemSlotId !== null) {
+        return (
+          <StackSlotSpan lineIdx={line.idx} normalId={adjustedMemSlotId}>
+            {displayMem}
+          </StackSlotSpan>
+        );
+      }
+      return displayMem;
     default:
       return <>{memSlotString}</>;
   }
@@ -503,7 +515,7 @@ const RegSpan = ({
   display: string | undefined;
   lineIdx: number;
 }) => {
-  const classNames = ["mem-slot", reg];
+  const classNames = ["mem-slot"];
   return (
     <span
       id={getMemSlotDomId(reg, lineIdx)}
@@ -516,24 +528,22 @@ const RegSpan = ({
 };
 
 const StackSlotSpan = ({
-  id,
   normalId,
-  display,
   lineIdx,
+  children,
 }: {
-  id: string;
   normalId: string;
-  display: string | undefined;
   lineIdx: number;
+  children: ReactElement;
 }) => {
-  const classNames = ["mem-slot", id];
+  const classNames = ["mem-slot"];
   return (
     <span
       id={getMemSlotDomId(normalId, lineIdx)}
       className={classNames.join(" ")}
       data-id={normalId}
     >
-      {display || id}
+      {children}
     </span>
   );
 };

@@ -19,6 +19,7 @@ import {
 } from "./parser";
 import {
   BpfMemSlotMap,
+  getAdjustedMemSlotId,
   insEntersNewFrame,
   normalMemSlotId,
   siblingInsLine,
@@ -518,6 +519,46 @@ export function processRawLines(rawLines: string[]): VerifierLogState {
         parsedLine.bpfIns.writes = parsedLine.bpfIns.writes.map((id) =>
           normalMemSlotId(id, bpfState.frame),
         );
+
+        if (
+          parsedLine.bpfIns.kind === BpfInstructionKind.ALU ||
+          parsedLine.bpfIns.kind === BpfInstructionKind.ADDR_SPACE_CAST
+        ) {
+          const srcMemSlotId = getAdjustedMemSlotId(
+            bpfState,
+            parsedLine.bpfIns.src.memref,
+          );
+          if (srcMemSlotId) {
+            parsedLine.bpfIns.reads.push(srcMemSlotId);
+          }
+
+          const dstMemSlotId = getAdjustedMemSlotId(
+            bpfState,
+            parsedLine.bpfIns.dst.memref,
+          );
+          if (dstMemSlotId) {
+            parsedLine.bpfIns.writes.push(dstMemSlotId);
+          }
+        } else if (
+          parsedLine.bpfIns.kind === BpfInstructionKind.JMP &&
+          parsedLine.bpfIns.jmpKind === BpfJmpKind.CONDITIONAL_GOTO
+        ) {
+          const leftMemSlotId = getAdjustedMemSlotId(
+            bpfState,
+            parsedLine.bpfIns.cond.left.memref,
+          );
+          if (leftMemSlotId) {
+            parsedLine.bpfIns.reads.push(leftMemSlotId);
+          }
+
+          const rightMemSlotId = getAdjustedMemSlotId(
+            bpfState,
+            parsedLine.bpfIns.cond.right.memref,
+          );
+          if (rightMemSlotId) {
+            parsedLine.bpfIns.writes.push(rightMemSlotId);
+          }
+        }
         break;
       }
     }
