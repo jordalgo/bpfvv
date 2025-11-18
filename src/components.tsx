@@ -70,7 +70,12 @@ type HelperArg = {
   name: string | null;
 };
 
-export type StoredLogs = [string, string[]][];
+// fileName -> cLines (N.B. not using a real Map to make it easier to json.parse/stringify)
+export type StoredCLines = { [index: string]: string[] };
+export type StoredLogs = [
+  string,
+  { rawLogLines: string[]; pastedCLines: StoredCLines },
+][];
 
 function isVoidHelperArg(arg: HelperArg) {
   return arg.type === "void" && arg.name === null && arg.star === null;
