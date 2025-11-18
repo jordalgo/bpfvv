@@ -20,8 +20,13 @@ import {
   Examples,
   CSourceRow,
   StoredLogs,
+  StoredCLines,
 } from "./components";
 import { getCLineId, ParsedLine, ParsedLineType } from "./parser";
+
+// Increment the version if there is a breaking change
+// in what we store
+const STORED_LOG_KEY = "logs-v2";
 
 function getEmptyVisualLogState(): VisualLogState {
   return {
@@ -62,8 +67,7 @@ function getVisibleLogLines(
 
 function getVisibleCLines(
   verifierLogState: VerifierLogState,
-  fileName: string = "",
-  pastedLines: string[] = [],
+  storedCLines: StoredCLines = {},
 ): [CSourceRow[], Map<string, number>] {
   const cLineIdToVisualIdx: Map<string, number> = new Map();
   const cLines: CSourceRow[] = [];
@@ -76,8 +80,8 @@ function getVisibleCLines(
     });
     ++j;
 
-    if (file === fileName && pastedLines.length > 0) {
-      pastedLines.forEach((lineText, i) => {
+    if (file in storedCLines) {
+      storedCLines[file].forEach((lineText, i) => {
         const lineNum = i + 1;
         const sourceId = getCLineId(file, lineNum);
         cLines.push({
@@ -232,7 +236,7 @@ function App({ testListHeight }: { testListHeight?: number }) {
     logLineIdxToVisualIdx.get(hoveredState.line) || 0;
 
   useEffect(() => {
-    ldb.get("logs", function (value) {
+    ldb.get(STORED_LOG_KEY, function (value) {
       try {
         const logs: StoredLogs = JSON.parse(value);
         if (logs) {
@@ -268,7 +272,12 @@ function App({ testListHeight }: { testListHeight?: number }) {
     });
   }, [verifierLogState]);
 
-  const updateStoredLogs = useCallback(
+  const updateStoredLogs = useCallback((nextStoredLogs: StoredLogs) => {
+    ldb.set(STORED_LOG_KEY, JSON.stringify(nextStoredLogs));
+    setStoredLogs(nextStoredLogs);
+  }, []);
+
+  const addStoredLog = useCallback(
     (lines: string[], name: string = "") => {
       const now = new Date();
       const nextName = name
@@ -276,11 +285,10 @@ function App({ testListHeight }: { testListHeight?: number }) {
         : `pasted log (${now.toDateString().toLowerCase()} - ${now.toLocaleTimeString().toLocaleLowerCase()})`;
       // Only keep 5 stored logs for now
       const nextStoredLogs: StoredLogs = [
-        [nextName, lines],
+        [nextName, { rawLogLines: lines, pastedCLines: {} }],
         ...storedLogs.slice(0, 5),
       ];
-      ldb.set("logs", JSON.stringify(nextStoredLogs));
-      setStoredLogs(nextStoredLogs);
+      updateStoredLogs(nextStoredLogs);
     },
     [storedLogs],
   );
@@ -293,29 +301,60 @@ function App({ testListHeight }: { testListHeight?: number }) {
 
   const addPastedCSourceFile = useCallback(
     (fileName: string, pastedLines: string[]) => {
-      setVisualLogState((prevState) => {
-        const [cLines, cLineIdToVisualIdx] = getVisibleCLines(
-          verifierLogState,
-          fileName,
-          pastedLines,
-        );
-        return {
-          ...prevState,
-          cLines,
-          cLineIdToVisualIdx,
-        };
+      const nextStoredLogs: StoredLogs = [];
+      storedLogs.forEach((storedLog, idx) => {
+        // The first stored log is the current one
+        if (idx !== 0) {
+          nextStoredLogs.push(storedLog);
+          return;
+        }
+
+        const nextPastedCLines: StoredCLines = {};
+        let found = false;
+        for (const [storedFileName, lines] of Object.entries(
+          storedLog[1].pastedCLines,
+        )) {
+          if (storedFileName !== fileName) {
+            nextPastedCLines[storedFileName] = lines;
+            return;
+          }
+          found = true;
+          nextPastedCLines[storedFileName] = pastedLines;
+        }
+        if (!found) {
+          nextPastedCLines[fileName] = pastedLines;
+        }
+        nextStoredLogs.push([
+          storedLog[0],
+          {
+            rawLogLines: storedLog[1].rawLogLines,
+            pastedCLines: nextPastedCLines,
+          },
+        ]);
+        setVisualLogState((prevState) => {
+          const [cLines, cLineIdToVisualIdx] = getVisibleCLines(
+            verifierLogState,
+            nextPastedCLines,
+          );
+          return {
+            ...prevState,
+            cLines,
+            cLineIdToVisualIdx,
+          };
+        });
       });
+      updateStoredLogs(nextStoredLogs);
     },
-    [verifierLogState],
+    [verifierLogState, storedLogs],
   );
 
   const loadInputText = useCallback(
     (text: string) => {
       const rawLines = text.split("\n");
       loadLog(rawLines);
-      updateStoredLogs(rawLines);
+      addStoredLog(rawLines);
     },
-    [updateStoredLogs],
+    [addStoredLog],
   );
 
   const prepareNewLog = useCallback(() => {
@@ -352,7 +391,30 @@ function App({ testListHeight }: { testListHeight?: number }) {
         if (!found) {
           console.error("Couldn't load previous log", example);
         } else {
-          loadLog(found[1]);
+          loadLog(found[1].rawLogLines);
+          // Move this to the most recent stored log
+          const nextStoredLogs: StoredLogs = [[found[0], found[1]]];
+          storedLogs.forEach((storedLog) => {
+            if (storedLog[0] !== example) {
+              nextStoredLogs.push(storedLog);
+            }
+          });
+          updateStoredLogs(nextStoredLogs);
+          const newVerifierLogState = processRawLines(found[1].rawLogLines);
+          const nextVisualLogState = getVisualLogState(
+            newVerifierLogState,
+            false,
+          );
+          const [cLines, cLineIdToVisualIdx] = getVisibleCLines(
+            newVerifierLogState,
+            found[1].pastedCLines,
+          );
+          setVisualLogState({
+            ...nextVisualLogState,
+            cLines,
+            cLineIdToVisualIdx,
+          });
+          setIsLoading(false);
         }
       }
     },
@@ -437,7 +499,7 @@ function App({ testListHeight }: { testListHeight?: number }) {
           }
           rawLines = rawLines.concat(lines);
         }
-        updateStoredLogs(rawLines, fileBlob.name);
+        addStoredLog(rawLines, fileBlob.name);
         const newVerifierLogState = processRawLines(rawLines);
         setVisualLogState(
           getVisualLogState(newVerifierLogState, visualLogState.showFullLog),
