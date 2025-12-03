@@ -277,21 +277,21 @@ function App({ testListHeight }: { testListHeight?: number }) {
     setStoredLogs(nextStoredLogs);
   }, []);
 
-  const addStoredLog = useCallback(
-    (lines: string[], name: string = "") => {
-      const now = new Date();
-      const nextName = name
-        ? name
-        : `pasted log (${now.toDateString().toLowerCase()} - ${now.toLocaleTimeString().toLocaleLowerCase()})`;
+  const addStoredLog = useCallback((lines: string[], name: string = "") => {
+    const now = new Date();
+    const nextName = name
+      ? name
+      : `pasted log (${now.toDateString().toLowerCase()} - ${now.toLocaleTimeString().toLocaleLowerCase()})`;
+    setStoredLogs((prevStoredLogs: StoredLogs) => {
       // Only keep 5 stored logs for now
       const nextStoredLogs: StoredLogs = [
         [nextName, { rawLogLines: lines, pastedCLines: {} }],
-        ...storedLogs.slice(0, 5),
+        ...prevStoredLogs.slice(0, 5),
       ];
-      updateStoredLogs(nextStoredLogs);
-    },
-    [storedLogs],
-  );
+      ldb.set(STORED_LOG_KEY, JSON.stringify(nextStoredLogs));
+      return nextStoredLogs;
+    });
+  }, []);
 
   const loadLog = useCallback((lines: string[]) => {
     const newVerifierLogState = processRawLines(lines);
@@ -348,14 +348,11 @@ function App({ testListHeight }: { testListHeight?: number }) {
     [verifierLogState, storedLogs],
   );
 
-  const loadInputText = useCallback(
-    (text: string) => {
-      const rawLines = text.split("\n");
-      loadLog(rawLines);
-      addStoredLog(rawLines);
-    },
-    [addStoredLog],
-  );
+  const loadInputText = useCallback((text: string) => {
+    const rawLines = text.split("\n");
+    loadLog(rawLines);
+    addStoredLog(rawLines);
+  }, []);
 
   const prepareNewLog = useCallback(() => {
     setSelectedState(getEmptyLogLineState());
@@ -443,7 +440,7 @@ function App({ testListHeight }: { testListHeight?: number }) {
         }
       });
     }
-  }, [loadInputText]);
+  }, []);
 
   const handleLogLinesOver = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
